@@ -1,0 +1,20 @@
+Limit messages to 100 at once
+	- purge 10 messages at a time
+
+Format chat UI (like nordscord?)
+	- Update message submission UI
+
+Force refresh on submission
+	- websocket?
+
+Lock message UI in place, and implement key drag
+	- draggable messages
+
+Update ordering of messages to index
+	- fast concurrent worker
+
+Update Readme
+	- include gif of example usage
+
+DEPLOY
+	- race condition counter?

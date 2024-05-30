@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import './Chat.css'
 
 interface Message {
   id: number;
@@ -12,13 +13,22 @@ const Chat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [username, setUsername] = useState<string>('');
   const [content, setContent] = useState<string>('');
+  const messagesEndRef = useRef<HTMLDivElement>(null); // Reference to the messages container
 
   useEffect(() => {
     axios.get('http://localhost:5000/messages')
       .then(response => {
         setMessages(response.data);
+        scrollToBottom(); // Scroll to bottom initially
       });
   }, []);
+
+  // Function to scroll the messages container to the bottom
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,16 +41,17 @@ const Chat: React.FC = () => {
           timestamp: response.data.timestamp
         }]);
         setContent('');
+        setTimeout(scrollToBottom, 100); // Scroll to bottom after adding new message
       });
   };
 
   return (
-    <div>
+    <div id='chat'>
       <h1>Chat</h1>
-      <div>
+      <div id='messages' ref={messagesEndRef}> {/* Attach ref to the messages container */}
         {messages.map((msg) => (
           <div key={msg.id}>
-            <strong>{msg.username}</strong>: {msg.content} <em>{new Date(msg.timestamp).toLocaleString()}</em>
+            <strong>{msg.username.slice(0, 12).padEnd(12, ' ')}</strong>: {msg.content}
           </div>
         ))}
       </div>
