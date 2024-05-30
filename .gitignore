@@ -1,0 +1,5 @@
+instance*
+
+./chat-app-fe/node_modules*
+
+./be/__pycache__*
