@@ -3,3 +3,12 @@
 	overflow-y: auto;
 	height: 60vh;
 }
+
+#chatheader {
+	display: flex;
+	align-items: center;
+}
+
+#scrollLock {
+	margin-left: auto;
+}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import LockIcon from './components/LockIcon';
 import './Chat.css'
 
 interface Message {
@@ -14,6 +15,23 @@ const Chat: React.FC = () => {
   const [username, setUsername] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null); // Reference to the messages container
+  const [scrollLock, setScrollLock] = useState(true);
+
+  // Function to scroll the messages container to the bottom
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    }
+  };
+
+  const toggleScrollLock = () => {
+    const currLock = scrollLock;
+    setScrollLock(!scrollLock);
+    // setState asynchronous, update scroll off old value
+    if (!currLock) {
+      scrollToBottom();
+    }
+  }
 
   useEffect(() => {
     axios.get('http://localhost:5000/messages')
@@ -22,13 +40,6 @@ const Chat: React.FC = () => {
         scrollToBottom(); // Scroll to bottom initially
       });
   }, []);
-
-  // Function to scroll the messages container to the bottom
-  const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +52,21 @@ const Chat: React.FC = () => {
           timestamp: response.data.timestamp
         }]);
         setContent('');
-        setTimeout(scrollToBottom, 100); // Scroll to bottom after adding new message
+        if (scrollLock) {
+          setTimeout(scrollToBottom, 100); // Scroll to our message
+        }
+        
       });
   };
 
   return (
     <div id='chat'>
-      <h1>Chat</h1>
+      <div id='chatheader'>
+        <h1>Chat</h1> 
+        <div id='scrollLock'>
+          <LockIcon locked={scrollLock} toggleLock={toggleScrollLock}/>
+        </div>
+      </div>
       <div id='messages' ref={messagesEndRef}> {/* Attach ref to the messages container */}
         {messages.map((msg) => (
           <div key={msg.id}>
