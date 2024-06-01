@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
-import os
+from flask_socketio import SocketIO, send
 
 app = Flask(__name__)
 CORS(app)
@@ -10,6 +10,7 @@ CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
 #app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+socketio = SocketIO(app, cors_allowed_origins='*')
 
 class Message(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
@@ -37,6 +38,19 @@ def add_message():
 	db.session.commit()
 	return jsonify({'id': new_message.id, 'timestamp': new_message.timestamp.isoformat()}), 201
 
+@socketio.on('connect')
+def handle_connect():
+	print('Client connected')
+
+@socketio.on('message')
+def handle_message(msg):
+	if 'username' and 'content' in msg:
+		new_message = Message(username=msg['username'], content=msg['content'])
+		db.session.add(new_message)
+		db.session.commit()
+
+		send({'id': new_message.id, 'timestamp': new_message.timestamp.isoformat(), 'username': msg['username'], 'content': msg['content']}, broadcast=True)
+
 if __name__ == '__main__':
 	db.create_all()
-	app.run(debug=True)
+	socketio.run(app, debug=True)

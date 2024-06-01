@@ -1,10 +1,10 @@
-Limit messages to 100 at once
+Limit messages to some amount at once
 	- purge 10 messages at a time
 
-Format chat UI (like nordscord?)
+Format chat UI (like nordscord?) -DONE
 	- Update message submission UI
 
-Force refresh on submission
+Force refresh on submission - DONE
 	- websocket?
 
 Lock message UI in place, and implement key drag
