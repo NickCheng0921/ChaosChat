@@ -1,4 +1,4 @@
-Limit messages to some amount at once
+Limit messages to some amount at once -DONE
 	- purge 10 messages at a time
 
 Format chat UI (like nordscord?) -DONE
