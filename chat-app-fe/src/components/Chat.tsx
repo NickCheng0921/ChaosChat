@@ -5,9 +5,10 @@ import LockIcon from './LockIcon';
 import './Chat.css'
 import { io } from 'socket.io-client';
 import TrashIcon from './TrashIcon';
+import HealthIcon from './HealthIcon';
 
-const SOCKET_SERVER_URL = "http://localhost:5000";
-const socket = io(SOCKET_SERVER_URL);
+const SOCKET_SERVER_URL = "https://nuckchead-be-70d6747d3acd.herokuapp.com/";
+const socket = io(SOCKET_SERVER_URL, {transports: ['websocket']});
 
 interface Message {
 	id: number;
@@ -27,6 +28,9 @@ const Chat: React.FC = () => {
 	const [draggedMsg, setDraggedMsg] = useState<number | null>(null);
 	const [mouse, setMouse] = useState<[number, number]>([0, 0]);
 	const [dropZone, setDropZone] = useState(0);
+
+	//  websocket
+	const [statusColor, setStatusColor] = useState('rgb(255, 0, 0)');
 
 	// Function to scroll the messages container to the bottom
 	const scrollToBottom = () => {
@@ -84,12 +88,58 @@ const Chat: React.FC = () => {
 
 	useEffect(() => {
 		// get current feed
-		axios.get('http://localhost:5000/messages')
+		axios.get('https://nuckchead-be-70d6747d3acd.herokuapp.com/messages')
 			.then(response => {
 				setMessages(response.data);
 				scrollToBottom(); // Scroll to bottom initially
 			});
 
+		const handleConnect = () => {
+			setStatusColor('rgb(0, 255, 0)');
+		};
+
+		const handleDisconnect = () => {
+			setStatusColor('rgb(255, 0, 0)');
+		}
+
+		socket.on('connect', handleConnect);
+		socket.on('disconnect', handleDisconnect);
+
+		socket.on('heartbeat', (msg) => {
+			console.log(msg, 'hbt');
+		})
+
+		socket.on('message', (msg) => {
+			console.log("Received msg type", msg['type']);
+			switch (msg['type']) {
+				case 'chat':
+					const newMessage = {
+						id: msg['id'],
+						username: msg['username'],
+						content: msg['content'],
+						timestamp: msg['timestamp']
+					}
+					setMessages(prevMessages => [...prevMessages, newMessage]);
+					
+					setContent('');
+					if (scrollLock) {
+						setTimeout(scrollToBottom, 100); // Scroll to our message
+					}
+					break;
+				case 'clearChat':
+					setMessages([]);
+					break;
+				default:
+					console.log("Unknown type", msg['type']);
+					break;
+			}
+		})
+
+		return () => {
+			socket.off('connect', handleConnect);
+			socket.off('disconnect', handleDisconnect);
+			socket.off("message");
+		};
 	}, [])
 
 	useEffect(() => {
@@ -134,38 +184,7 @@ const Chat: React.FC = () => {
 			setDropZone(result);
 		}
 
-		//ensure we can receive server side updates
-		socket.on('connect', () => {
-			console.log("Websocket up");
-		});
-
-		socket.on('message', (msg) => {
-			switch (msg['type']) {
-				case 'chat':
-					const newMessage = {
-						id: msg['id'],
-						username: msg['username'],
-						content: msg['content'],
-						timestamp: msg['timestamp']
-					}
-					setMessages(prevMessages => [...prevMessages, newMessage]);
-					
-					setContent('');
-					if (scrollLock) {
-						setTimeout(scrollToBottom, 100); // Scroll to our message
-					}
-					break;
-				case 'clearChat':
-					setMessages([]);
-					break;
-				default:
-					console.log("Unknown type", msg['type']);
-					break;
-			}
-		})
-
 		return () => {
-			socket.off("message");
 			document.removeEventListener("mousemove", dragHandler);
 			document.removeEventListener("mouseup", dropHandler);
 		};
@@ -191,6 +210,9 @@ const Chat: React.FC = () => {
 		<div id='chat'>
 			<div id='chatheader'>
 				<h1>Chat</h1> 
+				<div id='healthicon'>
+					<HealthIcon color={statusColor}/>
+				</div>
 				<div id='trash'>
 					<TrashIcon onTrashClick={clearChat}/>
 				</div>
@@ -219,7 +241,7 @@ const Chat: React.FC = () => {
 										e.preventDefault();
 										setDraggedMsg(index);
 									}}>
-									<strong>{msg.username}</strong>: {msg.content}, id -{'>'} {msg.id}
+									<strong>{msg.username}</strong>: {msg.content}
 								</div>
 								<div className={`msg-list-item drop-zone ${draggedMsg === null || dropZone !== index+1 ? "hidden" : ""}`}></div>
 							</>
@@ -234,6 +256,7 @@ const Chat: React.FC = () => {
 					placeholder="Username"
 					value={username}
 					onChange={(e) => setUsername(e.target.value)}
+					maxLength={20}
 					required
 				/>
 				<input
@@ -241,6 +264,7 @@ const Chat: React.FC = () => {
 					placeholder="Message"
 					value={content}
 					onChange={(e) => setContent(e.target.value)}
+					maxLength={200}
 					required
 				/>
 				<button type="submit" className="hidden">Send</button>

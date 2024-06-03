@@ -1,125 +1,155 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
 from flask_socketio import SocketIO, send
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy import create_engine
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
+import os
+import psycopg2
+from psycopg2 import sql
+import redis
 
-MAX_ENTRIES = 250
-
+MAX_ENTRIES = 500
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins='*')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
-db = SQLAlchemy(app)
-socketio = SocketIO(app, cors_allowed_origins='*')
+# Set up Redis connection
+redis_url = os.getenv('STACKHERO_REDIS_URL_TLS', 'redis://localhost:6379/0')
+print("REDIS_URL", redis_url)
+redis_client = redis.StrictRedis.from_url(redis_url)
 
-# Define the base for declarative models
-Base = declarative_base()
+# Configure Flask-SocketIO to use Redis as the message queue
+socketio = SocketIO(app, cors_allowed_origins='*', message_queue=redis_url)
 
-# Create an instance of the engine
-engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+# Database connection
+DATABASE_URL = os.environ['DATABASE_URL']
+conn = psycopg2.connect(DATABASE_URL)
+cur = conn.cursor()
 
-# Define the Message model using declarative base
-class Message(Base):
-	__tablename__ = 'messages'
-	id = Column(Integer, primary_key=True)
-	username = Column(String(20), nullable=False)
-	content = Column(String(200), nullable=False)
-	timestamp = Column(DateTime, default=datetime.now)
-	order = Column(Integer, nullable=False)
+usrs = []
 
-	# auto increment order off last one
-	def __init__(self, username, content):
-		self.username = username
-		self.content = content
-		self.timestamp = datetime.now()
-		max_order = session.query(Message).order_by(Message.order.desc()).first()
-		self.order = max_order.order + 1 if max_order else 1
+# Define the Message model
+class Message:
+    def __init__(self, username, content):
+        self.username = username
+        self.content = content
+        self.timestamp = datetime.now()
+        
+        cur.execute('SELECT MAX("order") FROM messages')
+        max_order = cur.fetchone()[0]
+        self.order = max_order + 1 if max_order is not None else 1
 
-Base.metadata.create_all(engine)
+    def save(self):
+        cur.execute(
+            sql.SQL('INSERT INTO messages (username, content, timestamp, "order") VALUES (%s, %s, %s, %s)'),
+            [self.username, self.content, self.timestamp, self.order]
+        )
+        conn.commit()
 
-# Set up the session
-Session = sessionmaker(bind=engine)
-session = Session()
+# Creating the messages table if it doesn't exist
+cur.execute("""
+CREATE TABLE IF NOT EXISTS messages (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(30) NOT NULL,
+    content VARCHAR(200) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "order" INTEGER NOT NULL
+)
+""")
+conn.commit()
 
-def count_entries(session):
-	return session.query(func.count(Message.id)).scalar()
+def count_entries():
+    cur.execute("SELECT COUNT(id) FROM messages")
+    return cur.fetchone()[0]
 
-def delete_half_entries(session):
-	half_count = count_entries(session) // 2
-	subquery = session.query(Message.id).order_by(Message.timestamp).limit(half_count).subquery()
-	session.query(Message).filter(Message.id.in_(subquery)).delete(synchronize_session=False)
-	session.commit()
+# Define the function to delete half of the entries
+def delete_half_entries():
+    half_count = count_entries() // 2
+    cur.execute("""
+        DELETE FROM messages
+        WHERE id IN (
+            SELECT id FROM messages
+            ORDER BY timestamp
+            LIMIT %s
+        )
+    """, [half_count])
+    conn.commit()
 
 def swap_message_order(pos1, pos2):
-	print('got p1, p2', pos1, pos2)
-	return
-	message1 = session.query(Message).filter_by(order=pos1).first()
-	message2 = session.query(Message).filter_by(order=pos2).first()
+    print('got p1, p2', pos1, pos2)
+    return
+    message1 = session.query(Message).filter_by(order=pos1).first()
+    message2 = session.query(Message).filter_by(order=pos2).first()
 
-	if not message1 or not message2:
-		print(f"ERROR: One or both positions are out of range for {pos1} {pos2}")
-		return
-	
-	message1.order, message2.order = message2.order, message1.order
-	session.commit()
+    if not message1 or not message2:
+        print(f"ERROR: One or both positions are out of range for {pos1} {pos2}")
+        return
+    
+    message1.order, message2.order = message2.order, message1.order
+    session.commit()
+
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
 
 @app.route('/messages', methods=['GET'])
 def get_messages():
-	messages = session.query(Message).order_by(Message.order).all()
-	return jsonify([
-		{
-			'id': msg.order,
-			'username': msg.username,
-			'content': msg.content,
-			'timestamp': msg.timestamp.isoformat()
-		} for msg in messages
-	])
+    cur.execute('SELECT id, username, content, timestamp, "order" FROM messages ORDER BY \"order\"')
+    messages = cur.fetchall()
+    messages_list = []
+    for message in messages:
+        messages_list.append({
+            'id': message[0],
+            'username': message[1],
+            'content': message[2],
+            'timestamp': message[3].isoformat(),
+            'order': message[4]
+        })
+    return jsonify(messages_list)
 
 @app.route('/messages', methods=['POST'])
 def add_message():
-	data = request.get_json()
-	new_message = Message(username=data['username'], content=data['content'])
-	session.add(new_message)
-	session.commit()
-
-	return jsonify({'id': new_message.id, 'timestamp': new_message.timestamp.isoformat()}), 201
+    data = request.get_json()
+    new_message = Message(username=data['username'], content=data['content'])
+    new_message.save()
+    
+    return jsonify({'id': new_message.id, 'timestamp': new_message.timestamp.isoformat()}), 201
 
 def clearChat():
-	session.query(Message).delete(synchronize_session=False)
-	session.commit()
+    cur.execute("DELETE FROM messages")
+    conn.commit()
 
 @socketio.on('connect')
 def handle_connect():
-	print('Client connected')
+    send({'type': 'handshake'})
+    usrs.append(request.sid)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    usrs.remove(request.sid)
 
 @socketio.on('message')
 def handle_message(msg):
-	if 'username' in msg and 'content' in msg:
-		new_message = Message(username=msg['username'], content=msg['content'])
-		session.add(new_message)
-		session.commit()
+    if 'username' in msg and 'content' in msg:
+        new_message = Message(username=msg['username'], content=msg['content'])
+        new_message.save()
 
-		if count_entries(session) > MAX_ENTRIES:
-			delete_half_entries(session)
+        if count_entries() > MAX_ENTRIES:
+            delete_half_entries()
 
-		send({
-			'type': 'chat',
-			'id': new_message.id,
-			'timestamp': new_message.timestamp.isoformat(),
-			'username': msg['username'],
-			'content': msg['content']
-		}, broadcast=True)
-	
-	if 'pos1' in msg and 'pos2' in msg:
-		swap_message_order(msg['pos1'], msg['pos2'])
-	
-	if 'clearChat' in msg:
-		clearChat()
-		send({'type': 'clearChat'}, broadcast=True);
+        send({
+            'type': 'chat',
+            'id': new_message.order,
+            'timestamp': new_message.timestamp.isoformat(),
+            'username': msg['username'],
+            'content': msg['content']
+        }, broadcast=True)
+    
+    if 'pos1' in msg and 'pos2' in msg:
+        swap_message_order(msg['pos1'], msg['pos2'])
+    
+    if 'clearChat' in msg:
+        clearChat()
+        send({'type': 'clearChat'}, broadcast=True);
 
 if __name__ == '__main__':
-	socketio.run(app, debug=True)
+    socketio.run(app, host='0.0.0.0', port=int(os.getenv('PORT', 5000)), debug=True)
