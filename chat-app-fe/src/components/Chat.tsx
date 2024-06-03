@@ -4,6 +4,7 @@ import LockIcon from './LockIcon';
 
 import './Chat.css'
 import { io } from 'socket.io-client';
+import TrashIcon from './TrashIcon';
 
 const SOCKET_SERVER_URL = "http://localhost:5000";
 const socket = io(SOCKET_SERVER_URL);
@@ -41,6 +42,14 @@ const Chat: React.FC = () => {
 		if (!currLock) {
 			scrollToBottom();
 		}
+	}
+
+	const clearChat = () => {
+		const msg = {
+			clearChat: '',
+		}
+
+		socket.send(msg);
 	}
 
 	//  https://dev.to/h8moss/build-a-reorderable-list-in-react-29on
@@ -93,7 +102,12 @@ const Chat: React.FC = () => {
 			if (draggedMsg !== null) {
 				e.preventDefault();
 				setDraggedMsg(null);
+				const msg = {
+					pos1: messages[draggedMsg].id,
+					pos2: dropZone,
+				}
 
+				socket.send(msg);
 				setMessages((messages) => reorderList([...messages], draggedMsg, dropZone));
 			}
 		};
@@ -126,18 +140,27 @@ const Chat: React.FC = () => {
 		});
 
 		socket.on('message', (msg) => {
-			//console.log("Received a msg ", msg);
-			const newMessage = {
-				id: msg['id'],
-				username: msg['username'],
-				content: msg['content'],
-				timestamp: msg['timestamp']
-			}
-			setMessages(prevMessages => [...prevMessages, newMessage]);
-			
-			setContent('');
-			if (scrollLock) {
-				setTimeout(scrollToBottom, 100); // Scroll to our message
+			switch (msg['type']) {
+				case 'chat':
+					const newMessage = {
+						id: msg['id'],
+						username: msg['username'],
+						content: msg['content'],
+						timestamp: msg['timestamp']
+					}
+					setMessages(prevMessages => [...prevMessages, newMessage]);
+					
+					setContent('');
+					if (scrollLock) {
+						setTimeout(scrollToBottom, 100); // Scroll to our message
+					}
+					break;
+				case 'clearChat':
+					setMessages([]);
+					break;
+				default:
+					console.log("Unknown type", msg['type']);
+					break;
 			}
 		})
 
@@ -168,6 +191,9 @@ const Chat: React.FC = () => {
 		<div id='chat'>
 			<div id='chatheader'>
 				<h1>Chat</h1> 
+				<div id='trash'>
+					<TrashIcon onTrashClick={clearChat}/>
+				</div>
 				<div id='scrollLock'>
 					<LockIcon locked={scrollLock} toggleLock={toggleScrollLock}/>
 				</div>
@@ -193,7 +219,7 @@ const Chat: React.FC = () => {
 										e.preventDefault();
 										setDraggedMsg(index);
 									}}>
-									<strong>{msg.username}</strong>: {msg.content}
+									<strong>{msg.username}</strong>: {msg.content}, id -{'>'} {msg.id}
 								</div>
 								<div className={`msg-list-item drop-zone ${draggedMsg === null || dropZone !== index+1 ? "hidden" : ""}`}></div>
 							</>

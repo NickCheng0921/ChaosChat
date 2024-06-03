@@ -26,9 +26,18 @@ engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 class Message(Base):
 	__tablename__ = 'messages'
 	id = Column(Integer, primary_key=True)
-	username = Column(String(80), nullable=False)
+	username = Column(String(20), nullable=False)
 	content = Column(String(200), nullable=False)
 	timestamp = Column(DateTime, default=datetime.now)
+	order = Column(Integer, nullable=False)
+
+	# auto increment order off last one
+	def __init__(self, username, content):
+		self.username = username
+		self.content = content
+		self.timestamp = datetime.now()
+		max_order = session.query(Message).order_by(Message.order.desc()).first()
+		self.order = max_order.order + 1 if max_order else 1
 
 Base.metadata.create_all(engine)
 
@@ -45,12 +54,25 @@ def delete_half_entries(session):
 	session.query(Message).filter(Message.id.in_(subquery)).delete(synchronize_session=False)
 	session.commit()
 
+def swap_message_order(pos1, pos2):
+	print('got p1, p2', pos1, pos2)
+	return
+	message1 = session.query(Message).filter_by(order=pos1).first()
+	message2 = session.query(Message).filter_by(order=pos2).first()
+
+	if not message1 or not message2:
+		print(f"ERROR: One or both positions are out of range for {pos1} {pos2}")
+		return
+	
+	message1.order, message2.order = message2.order, message1.order
+	session.commit()
+
 @app.route('/messages', methods=['GET'])
 def get_messages():
-	messages = session.query(Message).order_by(Message.timestamp).all()
+	messages = session.query(Message).order_by(Message.order).all()
 	return jsonify([
 		{
-			'id': msg.id,
+			'id': msg.order,
 			'username': msg.username,
 			'content': msg.content,
 			'timestamp': msg.timestamp.isoformat()
@@ -65,6 +87,10 @@ def add_message():
 	session.commit()
 
 	return jsonify({'id': new_message.id, 'timestamp': new_message.timestamp.isoformat()}), 201
+
+def clearChat():
+	session.query(Message).delete(synchronize_session=False)
+	session.commit()
 
 @socketio.on('connect')
 def handle_connect():
@@ -81,11 +107,19 @@ def handle_message(msg):
 			delete_half_entries(session)
 
 		send({
+			'type': 'chat',
 			'id': new_message.id,
 			'timestamp': new_message.timestamp.isoformat(),
 			'username': msg['username'],
 			'content': msg['content']
 		}, broadcast=True)
+	
+	if 'pos1' in msg and 'pos2' in msg:
+		swap_message_order(msg['pos1'], msg['pos2'])
+	
+	if 'clearChat' in msg:
+		clearChat()
+		send({'type': 'clearChat'}, broadcast=True);
 
 if __name__ == '__main__':
 	socketio.run(app, debug=True)
