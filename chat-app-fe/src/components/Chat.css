@@ -12,3 +12,30 @@
 #scrollLock {
 	margin-left: auto;
 }
+
+.msg-list-item {
+	cursor: pointer;
+}
+
+.floating {
+	position: absolute;
+	box-shadow: 5px 5px 10px rgba(0,0,0,0.5);
+	background-color: #2e3440;
+	margin: 0px;
+	padding: .2rem;
+}
+
+.msg-list-item.drop-zone {
+	height: 1em;
+	background-color: #434C5E;
+	overflow: hidden;
+}
+
+.msg-list-item.drop-zone.hidden {
+	height: 0px;
+	padding: 0px;
+}
+
+.hidden {
+	visibility: hidden;
+}
