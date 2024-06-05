@@ -7,7 +7,7 @@ Format chat UI (like nordscord?) -DONE
 Force refresh on submission - DONE
 	- websocket?
 
-Lock message UI in place, and implement key drag
+Lock message UI in place, and implement key drag - DONE
 	- draggable messages
 
 Update ordering of messages to index
@@ -18,3 +18,14 @@ Update Readme
 
 DEPLOY
 	- race condition counter?
+
+heroku git:remote -a nuckchead-be
+git subtree push --prefix be heroku deploy:main
+
+redis-server used locally for gunicorn workers to communicate
+
+
+# Issues
+receiving message clears message box
+slow to connect to websocket
+include rate restrict to .3 sec
