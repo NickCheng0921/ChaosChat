@@ -1,6 +1,6 @@
-# Web Chat
+# Chaos Chat
 
-Web Chat written in React + Flask.
+Web Chat written in React + Flask. Chat is chaotic as messages can be rearranged after they are sent by any user.
 
 ## Design Overview
 
@@ -32,9 +32,9 @@ Web Chat written in React + Flask.
 
 Frontend written with React + Typescript and backend written with Flask + websockets. Hosting was done using heroku with separate instances for frontend and backend.
 
-Frontend hosting uses a node buildpack, while backend hosting uses Gunicorn for speed and scalability, along with Redis to allow for worker communications. Redis is necessary as When a client connects to the chat, their websocket belongs to a single Gunicorn worker. If we want to broadcast an update to all connected users that a message has been sent, then we need a method for a single Gunicorn worker to communicate with all workers, which can be done with Redis.
+Frontend deploy uses a node buildpack, while backend deploy uses Gunicorn for speed and scalability along with Redis to allow for worker communications. Redis is necessary as when a client connects to the chat, their websocket belongs to a single Gunicorn worker. If that worker wants to broadcast an update to all other worker's websockets that a message has been sent, we need a method for a single Gunicorn worker to communicate with all workers, which can be done with Redis.
 
-DB for messages is an Essential 0 Postgres attached to the backend instance.
+DB for messages is a Postgres instance attached to the backend heroku dyno.
 
 ## Current features
 
