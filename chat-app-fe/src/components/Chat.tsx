@@ -110,7 +110,7 @@ const Chat: React.FC = () => {
 		})
 
 		socket.on('message', (msg) => {
-			console.log("Received msg type", msg['type']);
+			// console.log("Received msg type", msg['type']);
 			switch (msg['type']) {
 				case 'chat':
 					const newMessage = {
@@ -130,7 +130,7 @@ const Chat: React.FC = () => {
 					setMessages([]);
 					break;
 				default:
-					console.log("Unknown type", msg['type']);
+					// console.log("Unknown type", msg['type']);
 					break;
 			}
 		})
@@ -257,6 +257,7 @@ const Chat: React.FC = () => {
 					value={username}
 					onChange={(e) => setUsername(e.target.value)}
 					maxLength={20}
+					id="username"
 					required
 				/>
 				<input
@@ -265,6 +266,7 @@ const Chat: React.FC = () => {
 					value={content}
 					onChange={(e) => setContent(e.target.value)}
 					maxLength={200}
+					id="msgContent"
 					required
 				/>
 				<button type="submit" className="hidden">Send</button>
