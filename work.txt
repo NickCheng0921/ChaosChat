@@ -29,3 +29,4 @@ redis-server used locally for gunicorn workers to communicate
 receiving message clears message box
 slow to connect to websocket
 include rate restrict to .3 sec
+mod for deploy
