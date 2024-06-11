@@ -153,7 +153,7 @@ def add_message():
 
 @app.route('/ticker/', methods=['POST'])
 def ticker():
-    response = hp.get_data_recent(request.form['ticker'], request.form['years_ago'], request.form['months_ago'])
+    response = get_data_recent(request.form['ticker'], request.form['years_ago'], request.form['months_ago'])
     return response
 
 def clearChat():
