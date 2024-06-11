@@ -8,6 +8,8 @@ import psycopg2
 from psycopg2 import sql
 import redis
 
+from . import helper as hp
+
 MAX_ENTRIES = 500
 app = Flask(__name__)
 CORS(app, origins='*')
@@ -113,6 +115,11 @@ def add_message():
     new_message.save()
     
     return jsonify({'id': new_message.id, 'timestamp': new_message.timestamp.isoformat()}), 201
+
+@app.route('/ticker/', methods=['POST'])
+def ticker():
+    response = hp.get_data_recent(request.form['ticker'], request.form['years_ago'], request.form['months_ago'])
+    return response
 
 def clearChat():
     cur.execute("DELETE FROM messages")

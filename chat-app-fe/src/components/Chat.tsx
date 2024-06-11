@@ -207,9 +207,9 @@ const Chat: React.FC = () => {
 	};
 
 	return (
-		<div id='chat'>
+		<div id='chatbody'>
 			<div id='chatheader'>
-				<h1>Chat</h1> 
+				<strong>Chat</strong> 
 				<div id='healthicon'>
 					<HealthIcon color={statusColor}/>
 				</div>
@@ -250,27 +250,30 @@ const Chat: React.FC = () => {
 					</>
 				))}
 			</div>
-			<form onSubmit={handleSubmit}>
-				<input
-					type="text"
-					placeholder="Username"
-					value={username}
-					onChange={(e) => setUsername(e.target.value)}
-					maxLength={20}
-					id="username"
-					required
-				/>
-				<input
-					type="text"
-					placeholder="Message"
-					value={content}
-					onChange={(e) => setContent(e.target.value)}
-					maxLength={200}
-					id="msgContent"
-					required
-				/>
-				<button type="submit" className="hidden">Send</button>
-			</form>
+			<div className="input-container">
+				<form onSubmit={handleSubmit}>
+					<input
+						type="text"
+						placeholder="Username"
+						value={username}
+						onChange={(e) => setUsername(e.target.value)}
+						maxLength={20}
+						id="username"
+						required
+					/>
+					<input
+						type="text"
+						placeholder="Message"
+						value={content}
+						onChange={(e) => setContent(e.target.value)}
+						maxLength={200}
+						id="msgContent"
+						required
+					/>
+					<button type="submit" className="hidden">Send</button>
+				</form>
+			</div>
+
 		</div>
 	);
 };

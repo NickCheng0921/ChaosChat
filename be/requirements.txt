@@ -6,3 +6,4 @@ psycopg2_binary==2.9.9
 SQLAlchemy==2.0.29
 gunicorn==20.1.0
 redis==5.0.4
+yfinance==0.2.31
