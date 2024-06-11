@@ -75,7 +75,7 @@ const TickerChart = () => {
   const local = "http://127.0.0.1:5000/";
   const prod = "https://nuckchead-be-70d6747d3acd.herokuapp.com/";
   useEffect(() => {
-    axios.post(local+'ticker/', {
+    axios.post(prod+'ticker/', {
       ticker: 'AAPL',
       years_ago: parseInt(years),
       months_ago: parseInt(months),
