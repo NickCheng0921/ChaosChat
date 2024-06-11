@@ -1,20 +1,27 @@
-#chat {
-	border: 2px solid #4c566a;
-	border-radius: 10px;
-	padding: 1em;
-}
-
 #username, #msgContent {
 	background-color: #2e3440;
-	outline: none;
 	border: none;
 	color: white;
+}
+
+#username {
+	max-width: 15ch;
+}
+
+#msgContent {
+	max-width: 25ch;
+}
+
+.input-container {
+	display: inline-block;
 }
 
 #messages {
 	color: white;
 	overflow-y: auto;
-	height: 60vh;
+	height: 32vh;
+	margin-top: 1em;
+	margin-bottom: .5em;
 }
 
 #chatheader {
@@ -23,11 +30,12 @@
 }
 
 #scrollLock {
-	margin-left: 1em;
+	margin-left: .5em;
 }
 
 #healthicon {
 	margin-left: .5em;
+	font-size: 8px;
 }
 
 #trash {

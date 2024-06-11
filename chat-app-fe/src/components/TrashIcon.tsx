@@ -10,7 +10,7 @@ interface TrashIconProps {
 const TrashIcon: React.FC<TrashIconProps> = ({ onTrashClick }) => {
   return (
     <div style={{ cursor: 'pointer' }}>
-      <FontAwesomeIcon onClick={onTrashClick} icon={faTrashCan} size="2x" />
+      <FontAwesomeIcon onClick={onTrashClick} icon={faTrashCan} size="1x" />
     </div>
   );
 };

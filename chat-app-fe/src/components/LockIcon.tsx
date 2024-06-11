@@ -11,7 +11,7 @@ interface LockIconProps {
 const LockIcon: React.FC<LockIconProps> = ({ locked, toggleLock }) => {
   return (
     <div onClick={toggleLock} style={{ cursor: 'pointer' }}>
-      <FontAwesomeIcon icon={locked ? faLock : faUnlock} size="2x" />
+      <FontAwesomeIcon icon={locked ? faLock : faUnlock} size="1x" />
     </div>
   );
 };
